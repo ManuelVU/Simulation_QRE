@@ -1,4 +1,3 @@
-simulate_game<-function(matrixRow,matrixCol){
-  print("no mames")
-  return(23)
+simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda){
+  #under construction
 }
