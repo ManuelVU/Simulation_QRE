@@ -9,8 +9,10 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,beli
     SBR[1:ncol(matrixRow)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
     return(SBR-sigma)
   }
+  name_eq<-c(rep("C",ncol(matrixRow)),rep("R",nrow(matrixRow)))
   choice_r<-{}
   choice_c<-{}
+  equilibriums<-{}
   matrixCol<-matrixCol
   matrixRow<-matrixRow
   matrixCol_t<-t(matrixCol)
@@ -28,6 +30,7 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,beli
   }
   for(l in 1:length(lambda[,1])){
     solution <-nleqslv(fn = belief_error,x=as.vector(belives))
+    equilibriums<-rbind(equilibriums,solution$x)
     choice_r<-rbind(choice_r,t(rmultinom(n_p,t,solution$x[(ncol(matrixRow)+1):(ncol(matrixRow)+nrow(matrixRow))])))
     choice_c<-rbind(choice_c,
       t(rmultinom(n_p,t,solution$x[1:ncol(matrixRow)])))
@@ -35,8 +38,12 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,beli
   Results<-list()
   Results$row<-choice_r
   Results$col<-choice_c
+  Results$parameters$lambda<-lambda
+  Results$parameters$exp<-c(pairs,trials)
+  Results$parameters$games$R<-matrixRow
+  Results$parameters$games$C<-matrixCol
+  Results$equilibrium<-equilibriums
+  colnames(Results$equilibrium)<-name_eq
   return(Results)
   #under construction
 }
-datanew<-simulate_game(matrix(c(17,-1,1,-2,1,-1),nrow=3),-matrix(c(17,-1,1,-2,1,-1),nrow=3),
-                       10,100,10,c(0.2,0.8),c(0.7,0.1,0.2))
