@@ -14,19 +14,25 @@ m2 <- matrix(c(9,-9,-1,1),nrow=n)
 m1;m2
 believes <- matrix(rep(c(1/n,1/n),2),nrow=2,byrow = T)
 
+# asimetrico
+n=2
+m1 <- matrix(c(2,-2,-1,1),nrow=n)
+m2 <- -t(m1)
+m1;m2
+believes <- matrix(rep(c(1/n,1/n),2),nrow=2,byrow = T)
+believes <- matrix(c(1/3,2/3,1/2,1/2),nrow=2)
 
 # function to optimize ####
 sigma <- as.vector(believes)
-lambda= 10
+lambda= 100
 
 belief_error <- function(sigma){
   expected_payoff1 <- m1%*%sigma[1:n]*lambda
   expected_payoff2 <- m2%*%sigma[(n+1):(n*2)]*lambda
   SBR <- {}
-  SBR[1:n] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
-  SBR[(n+1):(n*2)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
-  sigma_r<-c(sigma[(n+1):(n*2)],sigma[1:n])
-  return(SBR-sigma_r)
+  SBR[(n+1):(n*2)] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
+  SBR[1:n] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
+  return(SBR-sigma)
 }
 
 belief_error(as.vector(believes))
