@@ -47,3 +47,8 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,beli
   return(Results)
   #under construction
 }
+
+
+d <- function(a){
+  return(a**2)
+}
