@@ -1,9 +1,16 @@
+
+expected_payoffs <- function(matrixP,sigma_other,lambda){
+  matrixP%*%sigma_other*lambda
+}
+
 # Pairs = How many pairs to be simulated for each value of lambda
 simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,belives_col){
   library(nleqslv)
   belief_error <- function(sigma){
-    expected_payoff1 <- matrixRow%*%sigma[1:ncol(matrixRow)]*lambda[l,1]
-    expected_payoff2 <- matrixCol_t%*%sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))]*lambda[l,2]
+    expected_payoff1 <- expected_payoffs(matrixP = matrixRow,sigma_other = sigma[1:ncol(matrixRow)],lambda = lambda[l,1])
+    #expected_payoff1 <- matrixRow%*%sigma[1:ncol(matrixRow)]*lambda[l,1]
+    expected_payoff2 <- expected_payoffs(matrixP = matrixCol_t,sigma_other = sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))],lambda = lambda[l,2])
+    #expected_payoff2 <- matrixCol_t%*%sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))]*lambda[l,2]
     SBR <- {}
     SBR[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
     SBR[1:ncol(matrixRow)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
