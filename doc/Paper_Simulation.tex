@@ -32,6 +32,10 @@
 %% \documentclass[final,5p,times]{elsarticle}
 %% \documentclass[final,5p,times,twocolumn]{elsarticle}
 
+
+%%Use this packageto allow for accents 
+\usepackage[utf8x]{inputenc}
+
 %% The graphicx package provides the includegraphics command.
 \usepackage{graphicx}
 %% The amssymb package provides various useful mathematical symbols
@@ -73,7 +77,7 @@
 
 %% Title, authors and addresses
 
-\title{Unnecessarily Complicated Research Title}
+\title{Analysis of QRE in simulated 2 $\times m \times n$ games using Bayesian Methods}
 
 %% use the tnoteref command within \title for footnotes;
 %% use the tnotetext command for the associated footnote;
@@ -100,14 +104,13 @@
 %% \address[label1]{<address>}
 %% \address[label2]{<address>}
 
-\author{John Smith}
+\author{Jesus Manuel Villarreal, Darío Trujano, Hrayr Der Hagopian}
 
-\address{California, United States}
+\address{Mexico City, Mexico}
 
 \begin{abstract}
 %% Text of abstract
-Suspendisse potenti. Suspendisse quis sem elit, et mattis nisl. Phasellus consequat erat eu velit rhoncus non pharetra neque auctor. Phasellus eu lacus quam. Ut ipsum dolor, euismod aliquam congue sed, lobortis et orci. Mauris eget velit id arcu ultricies auctor in eget dolor. Pellentesque suscipit adipiscing sem, imperdiet laoreet dolor elementum ut. Mauris condimentum est sed velit lacinia placerat. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nullam diam metus, pharetra vitae euismod sed, placerat ultrices eros. Aliquam tincidunt dapibus venenatis. In interdum tellus nec justo accumsan aliquam. Nulla sit amet massa augue.
-\end{abstract}
+Quantal Response Equilibrium (a.k.a. QRE) has proven to be useful in modeling strategic behavior consistent with Bounded Rationality. There are two parameterizations of the Logit model: the first one assumes $\lambda \in (0, \infty)$, as $\lambda \rightarrow \infty$ QRE will coincide with Nash Equilibrium and is interpreted as "Perfectly Rational", whereas if $\lambda \rightarrow 0$, the Players will choose strategies equiprobably, and therefore, is interpreted as "Perfectly Irrational". The second parameterization defines $\mu$ as the reciprocal of $\lambda$, hence, the interpretation is reverted as $\mu \rightarrow \infty$ or $\mu \rightarrow 0$. In estimates, it is generally implied that $\lambda$ has the same value for all Players. In addition, QRE has usually been tested in finite games for two Players with the same number of strategies each. One reason is the difficulty that arises in using MLE for the model. In this paper, we show the results to some simulations we ran, where we wanted to extend QRE to finite games with two Players with different number of strategies each, using Bayesian Methods for the Estimation and breaking away from the assumption that $\lambda$ has the same value for both Players. \end{abstract}
 
 \begin{keyword}
 Science \sep Publication \sep Complicated
