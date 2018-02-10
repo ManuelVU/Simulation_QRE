@@ -1,8 +1,8 @@
-
+#### Expected payoff function ####
 expected_payoffs <- function(matrixP,sigma_other,lambda){
   matrixP%*%sigma_other*lambda
 }
-
+#### Game Simulation function ####
 # Pairs = How many pairs to be simulated for each value of lambda
 simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,belives_col){
   library(nleqslv)
