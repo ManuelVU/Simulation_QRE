@@ -43,8 +43,10 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,beli
       t(rmultinom(n_p,t,solution$x[1:ncol(matrixRow)])))
   }
   Results<-list()
-  Results$row<-choice_r
-  Results$col<-choice_c
+  Results$row$bypair<-choice_r
+  Results$col$bypair<-choice_c
+  Results$row$collapsed<-colsum(choice_r)
+  Results$col$collapsed<-colsum(choice_c)
   Results$parameters$lambda<-lambda
   Results$parameters$exp<-c(pairs,trials)
   Results$parameters$games$R<-matrixRow
