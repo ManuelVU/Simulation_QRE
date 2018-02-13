@@ -1,2 +1,2 @@
 #### Bayes single lambda ####
-# eh! estamos trabajando para su pinche madre
+Bayes_QRE<-function(data_jags,)
