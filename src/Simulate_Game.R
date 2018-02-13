@@ -1,6 +1,7 @@
 #### Expected payoff function ####
 expected_payoffs <- function(matrixP,sigma_other,lambda){
-  matrixP%*%sigma_other*lambda
+  ep<-matrixP%*%sigma_other*lambda
+  return(as.vector(ep))
 }
 #### Game Simulation function ####
 # Pairs = How many pairs to be simulated for each value of lambda

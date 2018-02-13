@@ -1,8 +1,8 @@
 #### Bayes single lambda ####
 Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burnin,n_thin,model.file,model.name){
   library(R2jags,quietly=T,warn.conflicts = F)
-  # source(paste(c("src/",model.file),collapse="")
-  # source("src/Simulate_Game.R")
+  source(paste(c("src/",model.file),collapse=""))
+  source("src/Simulate_Game.R")
   if(is.character(data)){
     data<-load(paste(c("results/",data),collapse=""))
   }
@@ -17,8 +17,8 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
   }
   if(missing(my_inits)){
     my_inits<-list(
-      list(lambda<-rgamma(1,2,2)),
-      list(lambda<-rgamma(1,2,2)))             )
+      list(lambda=rgamma(1,2,2)),
+      list(lambda=rgamma(1,2,2)))
   }
   if(missing(n_iter)){
     n_iter<-15000
@@ -41,12 +41,21 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
     choice_r<-data$row$bypair
     choice_c<-data$col$bypair
   }
-  Es_row<-expected_payoffs(data$parameters$games$R,as.vector(choice_c/(data$parameters$exp[2]*data$parameters$exp[1])),1)
-  Es_col<-expected_payoffs(data$parameters$games$C,as.vector(choice_r/(data$parameters$exp[2]*data$parameters$exp[1])),1)
-  data_jags<-list(choice_r<-choice_r,choice_c<-choice_c,
-                  Es_row<-Es_row,Es_col<-Es_col,
-                  n_pairs<-data$parameters$exp[1],trials<-data$parameters$exp[2],
-                  game_r<-data$parameters$games$R,game_c<-data$parameters$games$C)
-  s<-jags(data=data_jags,inits = my_inits,parameters.to.save = parameters,model.file = model.name,
-          n.chains = n_chains,n.iter = n_iter,n.burnin = n_burnin,n.thin = n_thin,DIC = T)
+  Es_row<-expected_payoffs(data$parameters$games$R,
+                           as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
+  Es_col<-expected_payoffs(data$parameters$games$C,
+                           as.vector(data$row$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
+  n_pairs<-data$parameters$exp[1]
+  trials<-data$parameters$exp[2]
+  n_sr<-dim(data$parameters$games$R)[1]
+  n_sc<-dim(data$parameters$games$R)[2]
+  data_jags<-list("choice_r","choice_c","Es_row","Es_col","n_pairs","trials","n_sr","n_sc")
+  s<-jags(data=data_jags,
+          inits = my_inits,
+          parameters.to.save = c(paste(parameters)),
+          model.file = model.name,
+          n.chains = n_chains,
+          n.iter = n_iter,
+          n.burnin = n_burnin,
+          n.thin = n_thin,DIC = T)
 }
