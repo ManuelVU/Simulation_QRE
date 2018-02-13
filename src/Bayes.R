@@ -47,5 +47,6 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
                   Es_row<-Es_row,Es_col<-Es_col,
                   n_pairs<-data$parameters$exp[1],trials<-data$parameters$exp[2],
                   game_r<-data$parameters$games$R,game_c<-data$parameters$games$C)
-  
+  s<-jags(data=data_jags,inits = my_inits,parameters.to.save = parameters,model.file = model.name,
+          n.chains = n_chains,n.iter = n_iter,n.burnin = n_burnin,n.thin = n_thin,DIC = T)
 }
