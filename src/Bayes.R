@@ -1,10 +1,10 @@
 #### Bayes single lambda ####
-Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burnin,n_thin,model.file,model.name){
+Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burnin,n_thin,model.file,model.name,prior){
   library(R2jags,quietly=T,warn.conflicts = F)
   source(paste(c("src/",model.file),collapse=""))
   source("src/Simulate_Game.R")
   if(is.character(data)){
-    data<-load(paste(c("results/",data),collapse=""))
+    data<-get(load(paste(c("results/",data),collapse="")))
   }
   else{
     data<-data
