@@ -1,7 +1,7 @@
 #### Single Lambda Bayes models ####
-model_sl_gamma<-function(){
+gamma_sl<-function(){
   # Prior
-  lambda~dgamma(0.001,0.001)
+  lambda~dgamma(ab[1],ab[2])
   # functions
   for(i in 1:n_sr){
     v_sr[i]<-exp(lambda*Es_row[i])
@@ -22,9 +22,9 @@ model_sl_gamma<-function(){
     choice_c[n,]~dmulti(theta_c,trials)
   }
 }
-model_sl_lognorm<-function(){
+lognormal_sl<-function(){
   # Prior
-  lambda~dlnorm(0,0.01)
+  lambda~dlnorm(ab[1],ab[2])
   # functions
   for(i in 1:n_sr){
     v_sr[i]<-exp(lambda*Es_row[i])

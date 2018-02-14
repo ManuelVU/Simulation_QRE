@@ -41,6 +41,20 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
     choice_r<-data$row$bypair
     choice_c<-data$col$bypair
   }
+  if(prior=="gamma"){
+    prompt<-"Assign prior values to alpha and beta: "
+    ab<-as.numeric(strsplit(readline(prompt), ",")[[1]])
+    if(length(ab<2)){
+      ab<-c(0.001,0.001)
+    }
+  }
+  if(prior=="lognorm"){
+    prompt<-"Assign prior values to mu and tau: "
+    ab<-as.numeric(strsplit(readline(prompt), ",")[[1]])
+    if(length(ab<2)){
+      ab<-c(0,0.01)
+    }
+  }
   Es_row<-expected_payoffs(data$parameters$games$R,
                            as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   Es_col<-expected_payoffs(t(data$parameters$games$C),
@@ -49,7 +63,7 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
   trials<-data$parameters$exp[2]
   n_sr<-dim(data$parameters$games$R)[1]
   n_sc<-dim(data$parameters$games$R)[2]
-  data_jags<-list("choice_r","choice_c","Es_row","Es_col","n_pairs","trials","n_sr","n_sc")
+  data_jags<-list("choice_r","choice_c","Es_row","Es_col","n_pairs","trials","n_sr","n_sc","ab")
   s<-jags(data=data_jags,
           inits = my_inits,
           parameters.to.save = c(paste(parameters)),
