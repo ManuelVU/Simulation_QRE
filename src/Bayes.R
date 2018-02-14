@@ -43,7 +43,7 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
   }
   Es_row<-expected_payoffs(data$parameters$games$R,
                            as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
-  Es_col<-expected_payoffs(data$parameters$games$C,
+  Es_col<-expected_payoffs(t(data$parameters$games$C),
                            as.vector(data$row$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   n_pairs<-data$parameters$exp[1]
   trials<-data$parameters$exp[2]
