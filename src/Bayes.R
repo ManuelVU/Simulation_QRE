@@ -1,5 +1,8 @@
 #### Bayes single lambda ####
-Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burnin,n_thin,model.file,model.name,prior){
+Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
+                       my_inits=list(list(lambda=rgamma(1,2,2)),list(lambda=rgamma(1,2,2))),
+                       n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
+                       model.file="Bayesian_Models.R",model.name=gamma_sl,prior="gamma"){
   library(R2jags,quietly=T,warn.conflicts = F)
   source(paste(c("src/",model.file),collapse=""))
   source("src/Simulate_Game.R")
@@ -9,33 +12,9 @@ Bayes_QRE_sl<-function(data,collapsed,parameters,my_inits,n_iter,n_chains,n_burn
   else{
     data<-data
   }
-  if(missing(collapsed)){
-    collapsed<-F
-  }
-  if(missing(parameters)){
-    parameters<-c("lambda")
-  }
-  if(missing(my_inits)){
-    my_inits<-list(
-      list(lambda=rgamma(1,2,2)),
-      list(lambda=rgamma(1,2,2)))
-  }
-  if(missing(n_iter)){
-    n_iter<-15000
-  }
-  if(missing(n_chains)){
-    n_chains<-2
-  }
-  if(missing(n_burnin)){
-    n_burnin<-5000
-  }
-  if(missing(n_thin)){
-    n_thin<-1
-  }
   if(collapsed==T){
     choice_r<-data$row$collapsed
     choice_c<-data$col$collapsed
-    
   }
   else{
     choice_r<-data$row$bypair
