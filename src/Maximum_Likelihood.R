@@ -1,36 +1,79 @@
 # This file should contain the maximum likelihood functions
 #ESCRIBA AQI Dr. TRUJANO!
 
-
 source("src/Simulate_Game.R")
 source("src/Bayes.R")
+library(stats4)
 
-simulate_game_results <- simulate_game(matrixRow = m1,matrixCol = m2,pairs = 50,lambda = 2,belives_row = rep(.25,4),belives_col = rep(.25,4),trials = 100)
+n=4
+# oneil
+m1 <- matrix(c(-1,1,1,-1, 1,-1,1,-1,1,1,-1,-1, -1,-1,-1,1),nrow=n) 
+m1 <- m1*5
+m2 <- m1*(-1)
+believes <- matrix(rep(c(.2,.2,.2,.4),2),nrow=2,byrow = T)
 
-#### Bayes single lambda ####
-Bayes_QRE_sl<-function(simulate_game_results,collapsed,inits){
-  library(R2jags,quietly=T,warn.conflicts = F) # 1que hace?
-  source("src/Simulate_Game.R")
+simulate_game_results <- simulate_game(matrixRow = m1,matrixCol = m2,
+                                       pairs = 50,lambda = .5,trials = 100,
+                                       belives_row = rep(.25,4),belives_col = rep(.25,4))
+
+#### Stochastic Best Response ####
+sigma_SBR <- function(Es_row,Es_col,lambda=.5){
+  sigma_SBR <- matrix(nrow = length(Es_row),ncol = 2)
+  sigma_SBR[,1] <- exp(lambda*Es_row)/sum(exp(lambda*Es_row))
+  sigma_SBR[,2] <- exp(lambda*Es_row)/sum(exp(lambda*Es_row))
+  return(sigma_SBR)
+}
+#### Likelihood ####
+neg_log_L_collapsed <- function(Es_row,Es_col,lambda){
+  SBR = sigma_SBR(Es_row,Es_col,lambda)
+  log_L_collapsed = dmultinom(choice_r,prob= SBR[,1],log = T)+
+    dmultinom(choice_c,prob= SBR[,2],log = T)
+  return(-log_L_collapsed)
+}
+
+#### MLE single lambda ####
+MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
   if(is.character(data)){
-    data<-get(load(paste(c("results/",data),collapse="")))
+    data<-get(load(paste(c("results/",simulate_game_results),collapse="")))
   }
   else{
     data<-simulate_game_results
   }
-  if(missing(collapsed)){
-    collapsed<-F
-  }
+  matrixRow <- data$parameters$games$R
+  matrixCol_t <- t(data$parameters$games$C)
+  Es_row<-expected_payoffs(matrixRow,
+                           as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
+  Es_col<-expected_payoffs( matrixCol_t ,
+                           as.vector(data$row$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   if(collapsed==T){
     choice_r<-data$row$collapsed
     choice_c<-data$col$collapsed
+    # Expected payoffs 
+    MLE_collapsed_E_prop <- mle(minuslogl = neg_log_L_collapsed,start = list(lambda=1),
+        fixed = list(Es_row=Es_row,Es_col=Es_col))
+    # solving equations
+    neg_log_L_collapsed_nleqslv <- function(lambda){
+      belief_error <- function(sigma){ #sigma son las creencias de ambos jugadores
+        expected_payoff1 <- expected_payoffs(matrixP = matrixRow,sigma_other = sigma[1:ncol(matrixRow)],lambda = lambda)
+        expected_payoff2 <- expected_payoffs(matrixP = matrixCol_t,sigma_other = sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))],lambda = lambda)
+        SBR <- {}
+        SBR[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
+        SBR[1:ncol(matrixRow)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
+        return(SBR-sigma)
+      }
+      solutions <- nleqslv(fn = belief_error,x=c(rep(1/nrow(matrixRow),nrow(matrixRow)),rep(1/ncol(matrixRow),ncol(matrixRow))))
+      log_L_collapsed = dmultinom(choice_r,prob= solutions$x[(1+ncol(matrixRow)):(ncol(matrixRow)+nrow(matrixRow))],log = T)+
+        dmultinom(choice_c,prob= solutions$x[1:ncol(matrixRow)],log = T)
+      return(-log_L_collapsed)
+    }
+    MLE_collapsed_nleqslv <- mle(minuslogl = neg_log_L_collapsed_nleqslv,start = list(lambda=1))
   }
   else{
     choice_r<-data$row$bypair
     choice_c<-data$col$bypair
   }
-  Es_row<-expected_payoffs(data$parameters$games$R,
-                           as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
-  Es_col<-expected_payoffs(t(data$parameters$games$C),
-                           as.vector(data$row$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
-  
+  return(list(Ehat=MLE_collapsed_E_prop,nonlinear=MLE_collapsed_nleqslv))
 }
+
+MLE_QRE_sl(simulate_game_results,collapsed=T)
+
