@@ -4,6 +4,7 @@
 source("src/Simulate_Game.R")
 source("src/Bayes.R")
 library(stats4)
+library(nleqslv)
 
 n=4
 # oneil
@@ -20,11 +21,39 @@ simulate_game_results <- simulate_game(matrixRow = m1,matrixCol = m2,
 sigma_SBR <- function(Es_row,Es_col,lambda=.5){
   sigma_SBR <- matrix(nrow = length(Es_row),ncol = 2)
   sigma_SBR[,1] <- exp(lambda*Es_row)/sum(exp(lambda*Es_row))
-  sigma_SBR[,2] <- exp(lambda*Es_row)/sum(exp(lambda*Es_row))
+  sigma_SBR[,2] <- exp(lambda*Es_col)/sum(exp(lambda*Es_col))
   return(sigma_SBR)
 }
-#### Likelihood ####
-neg_log_L_collapsed <- function(Es_row,Es_col,lambda){
+
+#### Belief error ####
+belief_error <- function(sigma,matrixRow,matrixCol_t,lambda){ #sigma son las creencias de ambos jugadores
+  expected_payoff1 <- expected_payoffs(matrixP = matrixRow,sigma_other = sigma[1:ncol(matrixRow)],lambda = lambda)
+  expected_payoff2 <- expected_payoffs(matrixP = matrixCol_t,sigma_other = sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))],lambda = lambda)
+  SBR <- {}
+  SBR[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
+  SBR[1:ncol(matrixRow)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
+  return(SBR-sigma)
+}
+# Remember that in output, col strategies go first
+
+## QRE ####
+QRE_sol <- function(matrixRow,matrixCol_t,lambda){
+  QRE_sol<- nleqslv(fn = belief_error,
+          x=c(rep(1/nrow(matrixRow),nrow(matrixRow)),rep(1/ncol(matrixRow),ncol(matrixRow))),
+          matrixRow=matrixRow,matrixCol_t= matrixCol_t,lambda=lambda)[[1]]
+  return(QRE_sol)
+}
+## neg log likelihood ####
+### nleqslv
+neg_log_L_collapsed_nleqslv <- function(lambda, matrixRow,matrixCol_t,choice_r,choice_c){
+  QRE_sol <- QRE_sol(matrixRow,matrixCol_t,lambda)
+  log_L_collapsed <- 
+    dmultinom(choice_r,prob= QRE_sol[(1+ncol(matrixRow)):(ncol(matrixRow)+nrow(matrixRow))],log = T)+
+    dmultinom(choice_c,prob= QRE_sol[1:ncol(matrixRow)],log = T)
+  return(-log_L_collapsed)
+}
+### E_hat
+neg_log_L_collapsed <- function(Es_row,Es_col,lambda,choice_r,choice_c){
   SBR = sigma_SBR(Es_row,Es_col,lambda)
   log_L_collapsed = dmultinom(choice_r,prob= SBR[,1],log = T)+
     dmultinom(choice_c,prob= SBR[,2],log = T)
@@ -39,8 +68,10 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
   else{
     data<-simulate_game_results
   }
+  # Game payoffs used in sumulations
   matrixRow <- data$parameters$games$R
   matrixCol_t <- t(data$parameters$games$C)
+  #Expected Payoffs given proportions collapsed
   Es_row<-expected_payoffs(matrixRow,
                            as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   Es_col<-expected_payoffs( matrixCol_t ,
@@ -48,32 +79,20 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
   if(collapsed==T){
     choice_r<-data$row$collapsed
     choice_c<-data$col$collapsed
-    # Expected payoffs 
+    # Expected payoffs
     MLE_collapsed_E_prop <- mle(minuslogl = neg_log_L_collapsed,start = list(lambda=1),
-        fixed = list(Es_row=Es_row,Es_col=Es_col))
+        fixed = list(Es_row=Es_row,Es_col=Es_col,choice_r=choice_r,choice_c=choice_c))
     # solving equations
-    neg_log_L_collapsed_nleqslv <- function(lambda){
-      belief_error <- function(sigma){ #sigma son las creencias de ambos jugadores
-        expected_payoff1 <- expected_payoffs(matrixP = matrixRow,sigma_other = sigma[1:ncol(matrixRow)],lambda = lambda)
-        expected_payoff2 <- expected_payoffs(matrixP = matrixCol_t,sigma_other = sigma[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))],lambda = lambda)
-        SBR <- {}
-        SBR[(ncol(matrixRow)+1):((ncol(matrixRow))+nrow(matrixRow))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
-        SBR[1:ncol(matrixRow)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
-        return(SBR-sigma)
-      }
-      solutions <- nleqslv(fn = belief_error,x=c(rep(1/nrow(matrixRow),nrow(matrixRow)),rep(1/ncol(matrixRow),ncol(matrixRow))))
-      log_L_collapsed = dmultinom(choice_r,prob= solutions$x[(1+ncol(matrixRow)):(ncol(matrixRow)+nrow(matrixRow))],log = T)+
-        dmultinom(choice_c,prob= solutions$x[1:ncol(matrixRow)],log = T)
-      return(-log_L_collapsed)
-    }
-    MLE_collapsed_nleqslv <- mle(minuslogl = neg_log_L_collapsed_nleqslv,start = list(lambda=1))
+    MLE_collapsed_nleqslv <- mle(minuslogl = neg_log_L_collapsed_nleqslv,start = list(lambda=1),
+        fixed = list(matrixRow = matrixRow,matrixCol_t = matrixCol_t,choice_r = choice_r,choice_c = choice_c))
   }
   else{
     choice_r<-data$row$bypair
     choice_c<-data$col$bypair
   }
-  return(list(Ehat=MLE_collapsed_E_prop,nonlinear=MLE_collapsed_nleqslv))
+  return(list(Ehat=MLE_collapsed_E_prop@coef,nonlinear=MLE_collapsed_nleqslv@coef))
 }
+
 
 MLE_QRE_sl(simulate_game_results,collapsed=T)
 
