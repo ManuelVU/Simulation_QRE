@@ -89,6 +89,9 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
   else{
     choice_r<-data$row$bypair
     choice_c<-data$col$bypair
+    for(p in 1:length(choice_r)){
+      
+    }
   }
   return(list(Ehat=MLE_collapsed_E_prop@coef,nonlinear=MLE_collapsed_nleqslv@coef))
 }
