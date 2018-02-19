@@ -53,7 +53,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
           n.thin = n_thin,DIC = T)
 }
 #### Bayes single lambda NLEQ ####
-Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
+Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
                         my_inits=c(rgamma(2,0.01,0.01)),
                         n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
                         prior="gamma",proposal.par=c(0,3),prior.v=c(0.001,0.001)){
@@ -106,16 +106,24 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
         }
       }
       if(i==2){
+        solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=lambda[i-1])
         if(collapsed==T){
-          solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=lambda[i-1])
           likelihood[i-1]<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
                            dmultinom(choice_c,prob=solution$x[1:n_sc])
         }
+        else{
+          likelihood[i-1]<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
+                                apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
+        }
       }
+      solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=prop)
       if(collapsed==T){
-        solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=prop)
         likelihood.prop<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
                          dmultinom(choice_c,prob=solution$x[1:n_sc])
+      }
+      else{
+        likelihood.prop<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
+                              apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
       }
       if(prior=="gamma"){
         posterior.current<-likelihood[i-1]*dgamma(lambda[i-1],prior.v[1],prior.v[2])
@@ -142,9 +150,9 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
         }
       }
     }
-    print(c(dim(Results$chain),length(lambda)))
     Results$chain[,k]<-lambda
   }
   Results$chain<-Results$chain[-c(1:n_burnin),]
+  Results$chain<-Results$chain[seq(1,length(Results$chain[,1]),n_thin),]
   return(Results)
 }
