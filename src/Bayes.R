@@ -52,3 +52,99 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
           n.burnin = n_burnin,
           n.thin = n_thin,DIC = T)
 }
+#### Bayes single lambda NLEQ ####
+Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
+                        my_inits=c(rgamma(2,0.01,0.01)),
+                        n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
+                        prior="gamma",proposal.par=c(0,3),prior.v=c(0.001,0.001)){
+  Results<-list()
+  Results$chain<-matrix(NA,nrow=(n_iter),ncol=n_chains)
+  library(nleqslv)
+  source("src/Simulate_Game.R")
+  if(is.character(data)){
+    data<-get(load(paste(c("results/",data),collapse="")))
+  }
+  else{
+    data<-data
+  } 
+  if(collapsed==T){
+    choice_r<-data$row$collapsed
+    choice_c<-data$col$collapsed
+  }
+  else{
+    choice_r<-data$row$bypair
+    choice_c<-data$col$bypair
+  }
+  belief_error_bayes <- function(sigma,lambda){
+    expected_payoff1 <- data$parameters$games$R%*%sigma[1:ncol(m1)]*lambda
+    expected_payoff2 <- t(data$parameters$games$C)%*%sigma[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))]*lambda
+    SBR <- {}
+    SBR[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
+    SBR[1:ncol(m1)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
+    return(SBR-sigma)
+  }
+  n_pairs<-data$parameters$exp[1]
+  trials<-data$parameters$exp[2]
+  n_sr<-dim(data$parameters$games$R)[1]
+  n_sc<-dim(data$parameters$games$R)[2]
+  likelihood<-{}
+  for(k in 1:n_chains){
+    init<-my_inits[k]
+    lambda<-c()
+    for(i in 2:n_iter){
+      if(i==2){
+        lambda<-append(lambda,init)
+      }
+      bandera<-1
+      while(bandera==1){
+        prop<-lambda[i-1]+rnorm(n = 1,mean = proposal.par[1],sd = proposal.par[2])
+        if(prop<=0){
+          bandera<-1
+        }
+        else{
+          bandera<-2
+        }
+      }
+      if(i==2){
+        if(collapsed==T){
+          solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=lambda[i-1])
+          likelihood[i-1]<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
+                           dmultinom(choice_c,prob=solution$x[1:n_sc])
+        }
+      }
+      if(collapsed==T){
+        solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=prop)
+        likelihood.prop<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
+                         dmultinom(choice_c,prob=solution$x[1:n_sc])
+      }
+      if(prior=="gamma"){
+        posterior.current<-likelihood[i-1]*dgamma(lambda[i-1],prior.v[1],prior.v[2])
+        posterior.prop<-likelihood.prop*dgamma(prop,prior.v[1],prior.v[2])
+        
+      }
+      else if(prior=="lnorm"){
+        posterior.current<-likelihood[i-1]*dlnorm(lambda[i-1],prior.v[1],prior.v[2])
+        posterior.prop<-likelihood.prop*dlnorm(prop,prior.v[1],prior.v[2])
+      }
+      if((posterior.prop/posterior.current)>=1){
+        lambda<-append(lambda,prop)
+        likelihood<-append(likelihood,likelihood.prop)
+      }
+      else if((posterior.prop/posterior.current)<1){
+        accept.reject<-rbinom(n = 1,size = 1,prob = posterior.prop/posterior.current)
+        if(accept.reject==1){
+          lambda<-append(lambda,prop)
+          likelihood<-append(likelihood,likelihood.prop)
+        }
+        else{
+          lambda<-append(lambda,lambda[i-1])
+          likelihood<-append(likelihood,likelihood[i-1])
+        }
+      }
+    }
+    print(c(dim(Results$chain),length(lambda)))
+    Results$chain[,k]<-lambda
+  }
+  Results$chain<-Results$chain[-c(1:n_burnin),]
+  return(Results)
+}
