@@ -3,15 +3,6 @@ expected_payoffs <- function(matrixP,sigma_other,lambda){
   ep<-matrixP%*%sigma_other*lambda
   return(as.vector(ep))
 }
-#### Expected payoff for bayes NLEQSL ####
-belief_error_bayes <- function(sigma,lambda){
-  expected_payoff1 <- data$parameters$games$R%*%sigma[1:ncol(m1)]*lambda
-  expected_payoff2 <- t(data$parameters$games$C)%*%sigma[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))]*lambda
-  SBR <- {}
-  SBR[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
-  SBR[1:ncol(m1)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
-  return(SBR-sigma)
-}
 #### Game Simulation function ####
 # Pairs = How many pairs to be simulated for each value of lambda
 simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,belives_col){

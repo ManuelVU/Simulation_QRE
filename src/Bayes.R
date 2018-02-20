@@ -2,7 +2,8 @@
 Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
                        my_inits=list(list(lambda=rgamma(1,2,2)),list(lambda=rgamma(1,2,2))),
                        n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
-                       model.file="Bayesian_Models.R",model.name=gamma_sl,prior="gamma"){
+                       model.file="Bayesian_Models.R",model.name=gamma_sl,prior="gamma",
+                       prior.val=c(0.001,0.001,0,0.001)){
   library(R2jags,quietly=T,warn.conflicts = F)
   source(paste(c("src/",model.file),collapse=""))
   source("src/Simulate_Game.R")
@@ -21,18 +22,10 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
     choice_c<-data$col$bypair
   }
   if(prior=="gamma"){
-    prompt<-"Assign prior values to alpha and beta: "
-    ab<-as.numeric(strsplit(readline(prompt), ",")[[1]])
-    if(length(ab<2)){
-      ab<-c(0.001,0.001)
-    }
+    ab<-prior.val[1:2]
   }
   if(prior=="lognorm"){
-    prompt<-"Assign prior values to mu and tau: "
-    ab<-as.numeric(strsplit(readline(prompt), ",")[[1]])
-    if(length(ab<2)){
-      ab<-c(0,0.01)
-    }
+  ab<-prior.val[3:4]
   }
   Es_row<-expected_payoffs(data$parameters$games$R,
                            as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
@@ -54,8 +47,8 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
 }
 #### Bayes single lambda NLEQ ####
 Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
-                        my_inits=c(rgamma(2,0.01,0.01)),
-                        n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
+                        n_chains=2,
+                        my_inits=c(rgamma(n_chains,0.01,0.01)),n_iter=15000,n_burnin=5000,n_thin=1,
                         prior="gamma",proposal.par=c(0,3),prior.v=c(0.001,0.001)){
   Results<-list()
   Results$chain<-matrix(NA,nrow=(n_iter),ncol=n_chains)
@@ -76,15 +69,17 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
     choice_c<-data$col$bypair
   }
   belief_error_bayes <- function(sigma,lambda){
-    expected_payoff1 <- data$parameters$games$R%*%sigma[1:ncol(m1)]*lambda
-    expected_payoff2 <- t(data$parameters$games$C)%*%sigma[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))]*lambda
+    expected_payoff1 <- game_r%*%sigma[1:n_sc]*lambda
+    expected_payoff2 <- t(game_c)%*%sigma[(n_sc+1):(n_sc+n_sr)]*lambda
     SBR <- {}
-    SBR[(ncol(m1)+1):((ncol(m1))+(nrow(m1)))] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
-    SBR[1:ncol(m1)] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
+    SBR[(n_sc+1):(n_sc+n_sr)] <- exp(expected_payoff1)/(sum(exp(expected_payoff1)))
+    SBR[1:n_sc] <- exp(expected_payoff2)/(sum(exp(expected_payoff2)))
     return(SBR-sigma)
   }
   n_pairs<-data$parameters$exp[1]
   trials<-data$parameters$exp[2]
+  game_r<-data$parameters$games$R
+  game_c<-data$parameters$games$C
   n_sr<-dim(data$parameters$games$R)[1]
   n_sc<-dim(data$parameters$games$R)[2]
   likelihood<-{}
@@ -106,7 +101,21 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
         }
       }
       if(i==2){
-        solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=lambda[i-1])
+        bandera<-1
+        while(bandera==1){
+          init_bel_r<-runif(n_sc,min = 0.01,max=0.99)
+          init_bel_c<-runif(n_sr,min = 0.01,max=0.99)
+          init_bel_r<-init_bel_r/sum(init_bel_r)
+          init_bel_c<-init_bel_c/sum(init_bel_c)
+          solution<-nleqslv(fn = belief_error_bayes,x=c(init_bel_r,init_bel_c),lambda=lambda[i-1],
+                            global = "hook")
+          if(sum(solution$x<0)>0){
+            bandera<-1
+          }
+          else{
+            bandera<-2
+          }
+        }
         if(collapsed==T){
           likelihood[i-1]<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
                            dmultinom(choice_c,prob=solution$x[1:n_sc])
@@ -116,7 +125,21 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
                                 apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
         }
       }
-      solution<-nleqslv(fn = belief_error_bayes,x=c(rep(1/n_sr,n_sr),rep(1/n_sc,n_sc)),lambda=prop)
+      bandera<-1
+      while(bandera==1){
+        init_bel_r<-runif(n_sc,min = 0.01,max=0.99)
+        init_bel_c<-runif(n_sr,min = 0.01,max=0.99)
+        init_bel_r<-init_bel_r/sum(init_bel_r)
+        init_bel_c<-init_bel_c/sum(init_bel_c)
+        solution<-nleqslv(fn = belief_error_bayes,x=c(init_bel_r,init_bel_c),lambda=prop,
+                          global = "hook")
+        if(sum(solution$x<0)>0){
+          bandera<-1
+        }
+        else{
+          bandera<-2
+        }
+      }
       if(collapsed==T){
         likelihood.prop<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
                          dmultinom(choice_c,prob=solution$x[1:n_sc])
