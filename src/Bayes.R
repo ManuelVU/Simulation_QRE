@@ -49,7 +49,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
 Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
                         n_chains=2,
                         my_inits=c(rgamma(n_chains,0.01,0.01)),n_iter=15000,n_burnin=5000,n_thin=1,
-                        prior="gamma",proposal.par=c(0,3),prior.v=c(0.001,0.001)){
+                        prior="gamma",proposal.par=c(0,2),prior.v=c(0.001,0.001)){
   Results<-list()
   Results$chain<-matrix(NA,nrow=(n_iter),ncol=n_chains)
   library(nleqslv)
@@ -79,7 +79,7 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
   n_pairs<-data$parameters$exp[1]
   trials<-data$parameters$exp[2]
   game_r<-data$parameters$games$R
-  game_c<-data$parameters$games$C
+  game_c<-t(data$parameters$games$C)
   n_sr<-dim(data$parameters$games$R)[1]
   n_sc<-dim(data$parameters$games$R)[2]
   likelihood<-{}
@@ -108,7 +108,7 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
           init_bel_r<-init_bel_r/sum(init_bel_r)
           init_bel_c<-init_bel_c/sum(init_bel_c)
           solution<-nleqslv(fn = belief_error_bayes,x=c(init_bel_r,init_bel_c),lambda=lambda[i-1],
-                            global = "hook")
+                            global = "hook",method = "Newton")
           if(sum(solution$x<0)>0){
             bandera<-1
           }
@@ -132,7 +132,7 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
         init_bel_r<-init_bel_r/sum(init_bel_r)
         init_bel_c<-init_bel_c/sum(init_bel_c)
         solution<-nleqslv(fn = belief_error_bayes,x=c(init_bel_r,init_bel_c),lambda=prop,
-                          global = "hook")
+                          global = "hook",method = "Newton")
         if(sum(solution$x<0)>0){
           bandera<-1
         }
