@@ -1,23 +1,9 @@
 # This file should contain the maximum likelihood functions
 #ESCRIBA AQI Dr. TRUJANO!
-rm(list=ls())
 source("src/Simulate_Game.R")
 source("src/Bayes.R")
 library(stats4)
 library(nleqslv)
-
-n=4
-# oneil
-m1 <- matrix(c(-1,1,1,-1, 1,-1,1,-1,1,1,-1,-1, -1,-1,-1,1),nrow=n) 
-m1 <- m1*5
-m2 <- m1*(-1)
-m1 <- Estandar_payoffs(m1)
-m2 <- Estandar_payoffs(m2)
-believes <- matrix(rep(c(.2,.2,.2,.4),2),nrow=2,byrow = T)
-
-simulate_game_results <- simulate_game(matrixRow = m1,matrixCol = m2,
-                                       pairs = 50,lambda = .5,trials = 10000,
-                                       belives_row = rep(.25,4),belives_col = rep(.25,4))
 
 #### Stadarization ####
 Estandar_payoffs <- function(matrixPayoff){
@@ -71,12 +57,12 @@ neg_log_L_Ehat <- function(Es_row,Es_col,lambda,choice_r,choice_c){
 }
 
 #### MLE single lambda ####
-MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
+MLE_QRE_sl<-function(data,collapsed=F){
   if(is.character(data)){
-    data<-get(load(paste(c("results/",simulate_game_results),collapse="")))
+    data<-get(load(paste(c("results/",data),collapse="")))
   }
   else{
-    data<-simulate_game_results
+    data<-data
   }
   # Game payoffs used in sumulations
   matrixRow <- data$parameters$games$R
@@ -93,15 +79,20 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
     MLE_collapsed_nleqslv <- data.frame(matrix(ncol = 2,nrow = 1))
     colnames(MLE_collapsed_E_prop) <- colnames(MLE_collapsed_nleqslv) <- c("Lambda","SD")
     # Expected payoffs
-    MLE_E_collpased <- mle(minuslogl = neg_log_L_Ehat,start = list(lambda=data$parameters$lambda[1,1]),
+    MLE_E_collpased <- mle(minuslogl = neg_log_L_Ehat,
+        start = list(lambda=rexp(n = 1,rate = 1/(data$parameters$lambda[1,1]))),
         fixed = list(Es_row=Es_row,Es_col=Es_col,choice_r=choice_r,choice_c=choice_c),
-        method = "L-BFGS-B",lower=0,upper=100)
+        method = "L-BFGS-B",lower=0,upper=100
+        )
     MLE_collapsed_E_prop["Lambda"] <- MLE_E_collpased@coef
     MLE_collapsed_E_prop["SD"] <- sqrt(MLE_E_collpased@vcov)
     # solving equations
-    MLE_nleqslv <- mle(minuslogl = neg_log_L_nleqslv,start = list(lambda=data$parameters$lambda[1,1]),
+    MLE_nleqslv <- mle(minuslogl = neg_log_L_nleqslv,
+                       start = list(lambda=rexp(n = 1,rate = 1/(data$parameters$lambda[1,1]))),
                        fixed = list(matrixRow = matrixRow,matrixCol_t = matrixCol_t,
-                                    choice_r = choice_r,choice_c = choice_c))
+                                    choice_r = choice_r,choice_c = choice_c),
+                       method = "L-BFGS-B",lower=0,upper=100
+                       )
     MLE_collapsed_nleqslv["Lambda"] <-  MLE_nleqslv@coef
     MLE_collapsed_nleqslv["SD"] <-  sqrt(MLE_nleqslv@vcov)
     return(list(Collampsed_Ehat=MLE_collapsed_E_prop,
@@ -132,7 +123,9 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
       # solving equations
       MLE_nleqslv <- mle(minuslogl = neg_log_L_nleqslv,start = list(lambda=1),
                                    fixed = list(matrixRow = matrixRow,matrixCol_t = matrixCol_t,
-                                                choice_r = choice_r[p,],choice_c = choice_c[p,]))
+                                                choice_r = choice_r[p,],choice_c = choice_c[p,]),
+                         method = "L-BFGS-B",lower=0,upper=100
+                         )
       MLE_bypair_nleqslv[p,"Lambda"] <- MLE_nleqslv@coef
       MLE_bypair_nleqslv[p,"SD"] <- sqrt(MLE_nleqslv@vcov)
     }
@@ -142,7 +135,4 @@ MLE_QRE_sl<-function(simulate_game_results,collapsed=F){
 
 }
 
-
-MLE_QRE_sl(simulate_game_results,collapsed=T)
-MLE1 <- MLE_QRE_sl(simulate_game_results,collapsed=F)
 
