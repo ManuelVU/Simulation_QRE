@@ -96,7 +96,12 @@ MLE_QRE_sl<-function(data,collapsed=F){
     MLE_collapsed_nleqslv["Lambda"] <-  MLE_nleqslv@coef
     MLE_collapsed_nleqslv["SD"] <-  sqrt(MLE_nleqslv@vcov)
     return(list(Collampsed_Ehat=MLE_collapsed_E_prop,
-                Collapsed_nleqslv=MLE_collapsed_nleqslv))
+                Collapsed_nleqslv=MLE_collapsed_nleqslv,
+                Es_row=Es_row, Es_col=Es_col,
+                matrixRow=matrixRow,matrixCol_t=matrixCol_t,
+                choice_r=choice_r,choice_c=choice_c
+                )
+           )
   }
   else{
     choice_r<-data$row$bypair
@@ -130,9 +135,37 @@ MLE_QRE_sl<-function(data,collapsed=F){
       MLE_bypair_nleqslv[p,"SD"] <- sqrt(MLE_nleqslv@vcov)
     }
     return(list(Bypair_Ehat=MLE_bypair_nleqslv,
-                Bypair_nleqslv=MLE_bypair_nleqslv))
+                Bypair_nleqslv=MLE_bypair_nleqslv,
+                matrixRow=matrixRow,matrixCol_t=matrixCol_t,
+                choice_r=choice_r,choice_c=choice_c
+                )
+           )
   }
 
 }
+
+#### Explore de likelihood ####
+plot_L_lambda <- function(MLE_QRE_sl_collapsed,lambda_upper=10,lambda_by=1,E_hat=T){
+  lambdas <- matrix(seq(from = 0,to = lambda_upper,by = lambda_by))
+  if(E_hat==T){
+    likelihoods <-apply(X = lambdas,MARGIN = 1,FUN = neg_log_L_Ehat,
+                        Es_row = MLE_QRE_sl_collapsed$Es_row,
+                        Es_col = MLE_QRE_sl_collapsed$Es_col,
+                        choice_r = MLE_QRE_sl_collapsed$choice_r,
+                        choice_c = MLE_QRE_sl_collapsed$choice_c
+                        )
+    plot(lambdas,likelihoods,type="l",xlab="Lambda",ylab="Likelihood")
+  }else{
+    likelihoods <-apply(X = lambdas,MARGIN = 1,FUN = neg_log_L_nleqslv,
+                        matrixRow = MLE_QRE_sl_collapsed$matrixRow, 
+                        matrixCol_t = MLE_QRE_sl_collapsed$matrixCol_t,
+                        choice_r = MLE_QRE_sl_collapsed$choice_r,
+                        choice_c = MLE_QRE_sl_collapsed$choice_c)
+    plot(lambdas,likelihoods,type="l",xlab="Lambda",ylab="Likelihood")
+  }
+}
+
+
+
 
 
