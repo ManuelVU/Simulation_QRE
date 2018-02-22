@@ -46,12 +46,13 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
           n.thin = n_thin,DIC = T)
 }
 #### Bayes single lambda NLEQ ####
-Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
+Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
                         n_chains=2,
-                        my_inits=c(rgamma(n_chains,0.01,0.01)),n_iter=15000,n_burnin=5000,n_thin=1,
-                        prior="gamma",proposal.par=c(0,2),prior.v=c(0.001,0.001)){
+                        my_inits=c(rgamma(n_chains,1,1)),n_iter=15000,n_burnin=5000,n_thin=1,
+                        prior="gamma",proposal.par=c(0,3),prior.v=c(0.001,0.001)){
   Results<-list()
   Results$chain<-matrix(NA,nrow=(n_iter),ncol=n_chains)
+  Results$a<-c()
   library(nleqslv)
   source("src/Simulate_Game.R")
   if(is.character(data)){
@@ -86,13 +87,33 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
   for(k in 1:n_chains){
     init<-my_inits[k]
     lambda<-c()
+    tuning<-c()
+    countu<-1
+    countd<-1
+    count_alpha<-0
+    accepted<-0
     for(i in 2:n_iter){
       if(i==2){
         lambda<-append(lambda,init)
+        tuning<-append(tuning,proposal.par[2])
       }
       bandera<-1
       while(bandera==1){
-        prop<-lambda[i-1]+rnorm(n = 1,mean = proposal.par[1],sd = proposal.par[2])
+        if(i>100&i<=n_burnin){
+          alpha<-count_alpha/i
+          if((alpha-0.44)<0){
+            countu<-countu+1
+            tuning<-append(tuning,(tuning[i-1]-(tuning[i-1]*1/countu)))
+          }
+          else{
+            countd<-countd+1
+            tuning<-append(tuning,(tuning[i-1]+(tuning[i-1]*1/countd)))
+          }
+        }
+        else{
+          tuning<-append(tuning,tuning[i-1])
+        }
+        prop<-lambda[i-1]+rnorm(n = 1,mean = proposal.par[1],sd = tuning[i-1])
         if(prop<=0){
           bandera<-1
         }
@@ -118,11 +139,11 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
         }
         if(collapsed==T){
           likelihood[i-1]<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
-                           dmultinom(choice_c,prob=solution$x[1:n_sc])
+            dmultinom(choice_c,prob=solution$x[1:n_sc])
         }
         else{
           likelihood[i-1]<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
-                                apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
+                                  apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
         }
       }
       bandera<-1
@@ -142,11 +163,11 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
       }
       if(collapsed==T){
         likelihood.prop<-dmultinom(choice_r,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
-                         dmultinom(choice_c,prob=solution$x[1:n_sc])
+          dmultinom(choice_c,prob=solution$x[1:n_sc])
       }
       else{
         likelihood.prop<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution$x[(1+n_sc):(n_sc+n_sr)])*
-                              apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
+                                apply(choice_c,1,dmultinom(),size=trials,prob=solution$x[1:n_sc]))
       }
       if(prior=="gamma"){
         posterior.current<-likelihood[i-1]*dgamma(lambda[i-1],prior.v[1],prior.v[2])
@@ -160,12 +181,20 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
       if((posterior.prop/posterior.current)>=1){
         lambda<-append(lambda,prop)
         likelihood<-append(likelihood,likelihood.prop)
+        count_alpha<-count_alpha+1
+        if(i >n_burnin){
+          accepted=accepted+1
+        }
       }
       else if((posterior.prop/posterior.current)<1){
         accept.reject<-rbinom(n = 1,size = 1,prob = posterior.prop/posterior.current)
         if(accept.reject==1){
           lambda<-append(lambda,prop)
           likelihood<-append(likelihood,likelihood.prop)
+          count_alpha<-count_alpha+1
+          if(i >n_burnin){
+            accepted=accepted+1
+          }
         }
         else{
           lambda<-append(lambda,lambda[i-1])
@@ -174,6 +203,7 @@ Bayes_sl_nleq<-function(data,collapsed=F,parameters=c("lambda"),
       }
     }
     Results$chain[,k]<-lambda
+    Results$a[k]<-accepted/(n_iter-n_burnin)
   }
   Results$chain<-Results$chain[-c(1:n_burnin),]
   Results$chain<-Results$chain[seq(1,length(Results$chain[,1]),n_thin),]
