@@ -46,6 +46,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
           n.thin = n_thin,DIC = T)
 }
 #### Bayes single lambda NLEQ ####
+# Agregar la funcion general de belief error
 Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
                         n_chains=2,
                         my_inits=c(rgamma(n_chains,1,1)),n_iter=15000,n_burnin=5000,n_thin=1,

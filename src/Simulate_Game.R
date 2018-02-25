@@ -4,6 +4,7 @@ expected_payoffs <- function(matrixP,sigma_other,lambda){
   return(as.vector(ep))
 }
 #### Game Simulation function ####
+# usar belief error general
 # Pairs = How many pairs to be simulated for each value of lambda
 simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda,belives_row,belives_col){
   library(nleqslv)
