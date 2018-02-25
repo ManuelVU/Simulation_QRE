@@ -7,8 +7,9 @@ source("src/Bayes.R")
 source("src/Maximum_Likelihood.R")
 
 
-n=4
+
 # oneil
+n=4
 m1 <- matrix(c(-1,1,1,-1, 1,-1,1,-1,1,1,-1,-1, -1,-1,-1,1),nrow=n) 
 m1 <- m1*5
 m2 <- m1*(-1)
