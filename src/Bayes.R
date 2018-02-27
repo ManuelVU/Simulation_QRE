@@ -5,8 +5,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
                        model.file="Bayesian_Models.R",model.name=gamma_sl,prior="gamma",
                        prior.val=c(0.001,0.001,0,0.001)){
   library(R2jags,quietly=T,warn.conflicts = F)
-  source(paste(c("src/",model.file),collapse=""))
-  source("src/Simulate_Game.R")
+  source("src/Functions.R")
   if(is.character(data)){
     data<-get(load(paste(c("results/",data),collapse="")))
   }
