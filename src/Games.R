@@ -1,4 +1,4 @@
-source("src/Maximum_Likelihood.R")
+source("src/Functions.R")
 # Games to use in Simulations
 Games <- list()
 #Conflict ####

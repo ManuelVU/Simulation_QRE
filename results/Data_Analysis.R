@@ -1,7 +1,5 @@
 # This script is to be used only for the main data analysis of the paper on simulation and QRE
-source("src/Simulate_Game.R")
-source("src/Bayes.R")
-source("src/Maximum_Likelihood.R")
+source("src/Functions.R") 
 #### Game 1: Battle of the Sexes ####
 Game_id<-"BS"
 #Output path
