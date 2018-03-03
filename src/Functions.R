@@ -5,8 +5,8 @@ expected_payoffs <- function(matrixP,sigma_other,lambda){
   return(as.vector(ep))
 }
 # Stadarization 
-Estandar_payoffs <- function(matrixPayoff){
-  (max(matrixPayoff)-matrixPayoff)/(max(matrixPayoff)-min(matrixPayoff))
+Estandar_payoffs <- function(matrixPayoff,r=1){
+  (matrixPayoff^r-min(matrixPayoff)^r)/(max(matrixPayoff)^r-min(matrixPayoff)^r)
 }
 # Belief Error 
 belief_error <- function(sigma,matrixRow,matrixCol_t,lambda, lambdaCol=lambda){ #sigma son las creencias de ambos jugadores
