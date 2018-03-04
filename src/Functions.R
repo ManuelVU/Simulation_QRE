@@ -29,6 +29,7 @@ QRE_sol <- function(matrixRow,matrixCol_t,lambda, lambdaCol=lambda){
 # Data Simulation
 simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda){
   library(nleqslv)
+  Results<-list()
   name_eq<-c(rep("C",ncol(matrixRow)),rep("R",nrow(matrixRow)))
   choice_r<-{}
   choice_c<-{}
@@ -41,18 +42,22 @@ simulate_game<-function(matrixRow,matrixCol,pairs,trials,lambda){
   if(is.vector(lambda)){
     lambda_s<-cbind(c(lambda),c(lambda))
   }
+  count<-0
+  Results$row$collapsed<-matrix(NA,ncol=nrow(matrixRow),nrow=length(lambda))
+  Results$col$collapsed<-matrix(NA,ncol=ncol(matrixRow),nrow=length(lambda))
   for(l in 1:length(lambda_s[,1])){
-    solution <- QRE_sol(matrixRow = matrixRow, matrixCol_t = matrixCol_t, lambda = lambda_s[,1], lambdaCol = lambda_s[,2])
+    count<-count+1
+    solution <- QRE_sol(matrixRow = matrixRow, matrixCol_t = matrixCol_t, lambda = lambda_s[l,1], lambdaCol = lambda_s[l,2])
     equilibriums<-rbind(equilibriums,solution)
     choice_r<-rbind(choice_r,t(rmultinom(n_p,t,solution[(ncol(matrixRow)+1):(ncol(matrixRow)+nrow(matrixRow))])))
     choice_c<-rbind(choice_c,
                     t(rmultinom(n_p,t,solution[1:ncol(matrixRow)])))
+    Results$row$collapsed[count,]<-apply(choice_r[(1+(count*n_p-n_p)):(count*n_p),],2,sum)
+    Results$col$collapsed[count,]<-apply(choice_c[(1+(count*n_p-n_p)):(count*n_p),],2,sum)
   }
-  Results<-list()
+  
   Results$row$bypair<-choice_r
   Results$col$bypair<-choice_c
-  Results$row$collapsed<-colSums(choice_r)
-  Results$col$collapsed<-colSums(choice_c)
   Results$parameters$lambda<-lambda
   Results$parameters$exp<-c(pairs,trials)
   Results$parameters$games$R<-matrixRow
@@ -178,7 +183,7 @@ MLE_QRE_sl<-function(data,collapsed=F){
 
 #### BAYESIAN ESTIMATION ####
 # Bayes single lambda
-Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
+Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),a_lambda = 1,
                        my_inits=list(list(lambda=rgamma(1,2,2)),list(lambda=rgamma(1,2,2))),
                        n_iter=15000,n_chains=2,n_burnin=5000,n_thin=1,
                        model.file="Bayesian_Models.R",model.name=gamma_sl,prior="gamma",
@@ -205,14 +210,15 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),
     ab<-prior.val[3:4]
   }
   Es_row<-expected_payoffs(data$parameters$games$R,
-                           as.vector(data$col$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
+                           as.vector(data$col$collapsed[a_lambda,]/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   Es_col<-expected_payoffs(t(data$parameters$games$C),
-                           as.vector(data$row$collapsed/(data$parameters$exp[2]*data$parameters$exp[1])),1)
+                           as.vector(data$row$collapsed[a_lambda,]/(data$parameters$exp[2]*data$parameters$exp[1])),1)
   n_pairs<-data$parameters$exp[1]
   trials<-data$parameters$exp[2]
   n_sr<-dim(data$parameters$games$R)[1]
   n_sc<-dim(data$parameters$games$R)[2]
-  data_jags<-list("choice_r","choice_c","Es_row","Es_col","n_pairs","trials","n_sr","n_sc","ab")
+  data_jags<-list("choice_r","choice_c","Es_row","Es_col","n_pairs","trials",
+                  "n_sr","n_sc","ab","a_lambda")
   s<-jags(data=data_jags,
           inits = my_inits,
           parameters.to.save = c(paste(parameters)),
@@ -367,7 +373,7 @@ gamma_sl<-function(){
   }
   
   # likelihood
-  for(n in 1:n_pairs){
+  for(n in (1+(a_lambda*n_pairs-n_pairs)):(a_lambda*n_pairs)){
     choice_r[n,]~dmulti(theta_r,trials)
     choice_c[n,]~dmulti(theta_c,trials)
   }
@@ -391,7 +397,7 @@ lognormal_sl<-function(){
   }
   
   # likelihood
-  for(n in 1:n_pairs){
+  for(n in (1+(a_lambda*n_pairs-n_pairs)):(a_lambda*n_pairs)){
     choice_r[n,]~dmulti(theta_r,trials)
     choice_c[n,]~dmulti(theta_c,trials)
   }
