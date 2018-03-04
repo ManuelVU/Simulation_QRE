@@ -30,7 +30,7 @@ Games$Sexes <- list(matrixRow=m1,matrixCol=m2)
 # asimetrico ####
 n=2
 m1 <- matrix(c(9,0,0,1),nrow=n)
-m2 <- matrix(c(0,4,4,0))
+m2 <- matrix(c(0,4,4,0),nrow=n)
 m1 <- Estandar_payoffs(m1)
 m2 <- Estandar_payoffs(m2)
 Games$Asymmetric <- list(matrixRow=m1,matrixCol=m2) 
