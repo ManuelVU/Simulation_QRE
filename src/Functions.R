@@ -229,7 +229,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),a_lambda = 1,
           n.thin = n_thin,DIC = T)
 }
 # Bayes Non-Linear Equation Solver
-Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
+Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
                         n_chains=2,n_iter=15000,n_burnin=5000,n_thin=1,
                         my_inits=c(rgamma(n_chains,1,1)),
                         prior="gamma",proposal.par=c(0,1),prior.v=c(0.001,0.001)){
@@ -244,8 +244,8 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),
     data<-data
   } 
   if(collapsed==T){
-    choice_r<-data$row$collapsed
-    choice_c<-data$col$collapsed
+    choice_r<-data$row$collapsed[a_lambda,]
+    choice_c<-data$col$collapsed[a_lambda,]
   }
   else{
     choice_r<-data$row$bypair
