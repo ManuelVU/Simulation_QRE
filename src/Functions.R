@@ -232,7 +232,7 @@ Bayes_QRE_sl<-function(data,collapsed=F,parameters=c("lambda"),a_lambda = 1,
 Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
                         n_chains=2,n_iter=15000,n_burnin=5000,n_thin=1,
                         my_inits=c(rgamma(n_chains,1,1)),
-                        prior="gamma",proposal.par=c(0,1),prior.v=c(0.001,0.001)){
+                        prior="gamma",proposal.par=c(0,2),prior.v=c(0.001,0.001)){
   Results<-list()
   Results$chain<-matrix(NA,nrow=(n_iter),ncol=n_chains)
   Results$a<-c()
@@ -261,28 +261,20 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
   for(k in 1:n_chains){
     init<-my_inits[k]
     lambda_s<-c()
+    mu<-{}
     tuning<-c()
-    countu<-1
-    countd<-1
     count_alpha<-0
     accepted<-0
     for(i in 2:n_iter){
       if(i==2){
         lambda_s<-append(lambda_s,init)
         tuning<-append(tuning,proposal.par[2])
+        tuning<-append(tuning,proposal.par[2])
       }
       bandera<-1
       while(bandera==1){
-        if(i>100&i<=n_burnin){
-          alpha<-count_alpha/i
-          if((alpha-0.44)<0){
-            countu<-countu+1
-            tuning<-append(tuning,(tuning[i-1]-(tuning[i-1]*1/countu)))
-          }
-          else{
-            countd<-countd+1
-            tuning<-append(tuning,(tuning[i-1]+(tuning[i-1]*1/countd)))
-          }
+        if(i>2&i<=n_burnin){
+          tuning<-append(tuning,(tuning[i-1]+((1/(i+1))*((length(lambda_s)-1)*var(lambda_s)-tuning[i-1]))))
         }
         else{
           tuning<-append(tuning,tuning[i-1])
@@ -299,21 +291,21 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
         solution<-QRE_sol(matrixRow=game_r,matrixCol_t=game_c,lambda=lambda_s[i-1])
         if(collapsed==T){
           likelihood[i-1]<-dmultinom(choice_r,prob=solution[(1+n_sc):(n_sc+n_sr)])*
-                           dmultinom(choice_c,prob=solution[1:n_sc])
+            dmultinom(choice_c,prob=solution[1:n_sc])
         }
         else{
           likelihood[i-1]<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution[(1+n_sc):(n_sc+n_sr)])*
-                                apply(choice_c,1,dmultinom(),size=trials,prob=solution[1:n_sc]))
+                                  apply(choice_c,1,dmultinom(),size=trials,prob=solution[1:n_sc]))
         }
       }
       solution<-QRE_sol(matrixRow=game_r,matrixCol_t=game_c,lambda=prop)
       if(collapsed==T){
         likelihood.prop<-dmultinom(choice_r,prob=solution[(1+n_sc):(n_sc+n_sr)])*
-                         dmultinom(choice_c,prob=solution[1:n_sc])
+          dmultinom(choice_c,prob=solution[1:n_sc])
       }
       else{
         likelihood.prop<-prod(apply(choice_r,1,dmultinom(),size=trials,prob=solution[(1+n_sc):(n_sc+n_sr)])*
-                              apply(choice_c,1,dmultinom(),size=trials,prob=solution[1:n_sc]))
+                                apply(choice_c,1,dmultinom(),size=trials,prob=solution[1:n_sc]))
       }
       if(prior=="gamma"){
         posterior.current<-likelihood[i-1]*dgamma(lambda_s[i-1],prior.v[1],prior.v[2])
@@ -347,6 +339,7 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
         }
       }
     }
+    print(tuning[i-1])
     Results$chain[,k]<-lambda_s
     Results$a[k]<-accepted/(n_iter-n_burnin)
   }
@@ -548,7 +541,8 @@ Hist<-function(x,border,color,lbreaks,CI,horizontal,add.p,xax,lwd.h,add,fill){
   return(hist.data)
 }
 # Plot Simulation Results
-plot_data<-function(data,add_hist=T,add_equilibrium=T,highlight_population=T,Oneil=F){
+plot_data<-function(data,add_hist=T,add_equilibrium=T,highlight_population=T,Oneil=F,
+                    a_lambda=1,add=F,color="#000000"){
   library(nleqslv)
   if(is.character(data)){
     data<-get(load(paste(c("results/",data),collapse="")))
@@ -556,8 +550,9 @@ plot_data<-function(data,add_hist=T,add_equilibrium=T,highlight_population=T,One
   else{
     data<-data
   }
+  n_pairs<-data$parameters$exp[1]
   if(add_equilibrium==T){
-    x<-seq(0.01,data$parameters$lambda[,1],length=50)
+    x<-seq(0.01,data$parameters$lambda[a_lambda],length=50)
     equilibriums<-matrix(NA,ncol=2,nrow=length(x))
     count<-0
     for(i in x){
@@ -565,48 +560,82 @@ plot_data<-function(data,add_hist=T,add_equilibrium=T,highlight_population=T,One
       solution<-QRE_sol(matrixRow = data$parameters$games$R, matrixCol_t = t(data$parameters$games$C), 
                         lambda = i, lambdaCol = i)
       if(Oneil==T){
-        equilibriums[count,1]<-sum(solution[5:7])
-        equilibriums[count,2]<-sum(solution[1:3])
+        equilibriums[count,1]<-sum(solution[5:7],na.rm=T)
+        equilibriums[count,2]<-sum(solution[1:3],na.rm=T)
       }
       else{
         equilibriums[count,1]<-solution[3]
-        equilibriums[count,1]<-solution[1]
+        equilibriums[count,2]<-solution[1]
       }
     }
   }
-  par(fig=c(0,0.8,0,0.8))
+  # par(fig=c(0,0.8,0,0.8))
   if(highlight_population==T){
     if(Oneil==T){
-      plot(apply(data$row$bypair[,1:3],1,sum)/data$parameters$exp[2],
-           apply(data$col$bypair[,1:3],1,sum)/data$parameters$exp[2],
-           col="#00000066",pch=18,cex=1.3,ann=F,axes=F,
-           ylim=c(0,1),xlim=c(0,1))
-      points(sum(data$row$collapsed[1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
-             sum(data$col$collapsed[1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
-             col="#000000",pch=18,cex=1.8)
+      if(add==F){
+        plot(0,0,ylim=c(0,1),xlim=c(0,1),ann=F,axes=F,type="n")
+        points(apply(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               apply(data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               col=paste(c(color,66),collapse=""),pch=18,cex=1.3)
+        points(sum(data$row$collapsed[a_lambda,1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
+               sum(data$col$collapsed[a_lambda,1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
+               bg=color,pch=23,cex=1.8)
+      }
+      else{
+        points(apply(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               apply(data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               col=paste(c(color,66),collapse=""),pch=18,cex=1.3)
+        points(sum(data$row$collapsed[a_lambda,1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
+               sum(data$col$collapsed[a_lambda,1:3])/(data$parameters$exp[2]*data$parameters$exp[1]),
+               bg=color,pch=23,cex=1.8)
+      }
     }
     else{
-      plot(data$row$bypair[,1]/data$parameters$exp[2],
-           data$col$bypair[,1]/data$parameters$exp[2]
-           ,col="#00000066",pch=18,cex=1.3,ann=F,axes=F,
-           ylim=c(0,1),xlim=c(0,1))  
-      points(data$row$collapsed[,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
-             data$col$collapsed[,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
-             col="#000000",pch=18,cex=1.8)
+      if(add==F){
+        plot(0,0,ylim=c(0,1),xlim=c(0,1),ann=F,axes=F,type="n")
+        points(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               col=paste(c(color,66),collapse=""),pch=18,cex=1.3)  
+        points(data$row$collapsed[a_lambda,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
+               data$col$collapsed[a_lambda,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
+               bg=color,pch=23,cex=1.8)
+      }
+      else{
+        points(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               col=paste(c(color,66),collapse=""),pch=18,cex=1.3)  
+        points(data$row$collapsed[a_lambda,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
+               data$col$collapsed[a_lambda,1]/(data$parameters$exp[2]*data$parameters$exp[1]),
+               bg=color,pch=23,cex=1.8)
+      }
     }
   }
   else{
     if(Oneil==T){
-      plot(apply(data$row$bypair[,1:3],1,sum)/data$parameters$exp[2],
-           apply(data$col$bypair[,1:3],1,sum)/data$parameters$exp[2],
-           col="#000000",pch=18,cex=1.3,ann=F,axes=F,
-           ylim=c(0,1),xlim=c(0,1))
+      if(add==F){
+        plot(0,0,ylim=c(0,1),xlim=c(0,1),ann=F,axes=F,type="n")
+        points(apply(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               apply(data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               col=color,pch=18,cex=1.3)
+      }
+      else{
+        points(apply(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               apply(data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1:3],1,sum)/data$parameters$exp[2],
+               col=color,pch=18,cex=1.3)
+      }
     }
     else{
-      plot(data$row$bypair[,1]/data$parameters$exp[2],
-           data$col$bypair[,1]/data$parameters$exp[2]
-           ,col="#000000",pch=18,cex=1.3,ann=F,axes=F,
-           ylim=c(0,1),xlim=c(0,1))  
+      if(add==F){
+        plot(0,0,ylim=c(0,1),xlim=c(0,1),ann=F,axes=F,type="n")
+        points(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               col=color,pch=18,cex=1.3)
+      }
+      else{
+        points(data$row$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               data$col$bypair[(1+a_lambda*n_pairs-n_pairs):(a_lambda*n_pairs),1]/data$parameters$exp[2],
+               col=color,pch=18,cex=1.3)  
+      }
     }
   }
   if(add_equilibrium==T){
@@ -614,27 +643,5 @@ plot_data<-function(data,add_hist=T,add_equilibrium=T,highlight_population=T,One
     points(equilibriums[length(equilibriums[,1]),1],equilibriums[length(equilibriums[,1]),2],
            pch="*",cex=1.6,col="#A43820")
   }
-  box()
-  axis(1)
-  axis(2)
-  mtext(paste("ROW"),1,line=2.3,cex=1.4,col="#00000099")
-  mtext(paste("COLUMN"),2,line=2.2,cex=1.4,col="#00000099")
-  par(fig=c(0,0.8,0.53,1), new=TRUE)
-  if(Oneil==T){
-    Hist(apply(data$row$bypair[,1:3],1,sum)/data$parameters$exp[2],color="#000000",lbreaks=10,
-         xax=c(0,1))
-  }
-  else{
-    Hist(data$row$bypair[,1]/data$parameters$exp[2],color="#000000",lbreaks=10,horizontal = T,
-         xax=c(0,1))
-  }
-  par(fig=c(0.616,1,0,0.8),new=TRUE)
-  if(Oneil==T){
-    Hist(apply(data$row$bypair[,1:3],1,sum)/data$parameters$exp[2],
-         color="#000000",lbreaks=10,horizontal = T,xax=c(0,1))  
-  }
-  else{
-    Hist(data$col$bypair[,1]/data$parameters$exp[2],color="#000000",lbreaks=20,horizontal = T,
-         xax=c(0,1))
-  }
+  box(col="#66666644")
 }
