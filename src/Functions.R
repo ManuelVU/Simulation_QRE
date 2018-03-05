@@ -287,7 +287,7 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
         else{
           tuning<-append(tuning,tuning[i-1])
         }
-        prop<-lambda[i-1]+rnorm(n = 1,mean = proposal.par[1],sd = tuning[i-1])
+        prop<-lambda_s[i-1]+rnorm(n = 1,mean = proposal.par[1],sd = tuning[i-1])
         if(prop<=0){
           bandera<-1
         }
@@ -347,7 +347,7 @@ Bayes_sl_nleq<-function(data,collapsed=T,parameters=c("lambda"),a_lambda=1,
         }
       }
     }
-    Results$chain[,k]<-lambda
+    Results$chain[,k]<-lambda_s
     Results$a[k]<-accepted/(n_iter-n_burnin)
   }
   Results$chain<-Results$chain[-c(1:n_burnin),]
