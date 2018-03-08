@@ -41,5 +41,6 @@ m1 <- matrix(c(-1,0,-3,-2),nrow=n)
 m2 <- t(m1)
 m1 <- Estandar_payoffs(m1)
 m2 <- Estandar_payoffs(m2)
-Games$PDilemma <- list(matrixRow=m1,matrixCol=m2) 
+Games$PDilemma <- list(matrixRow=m1,matrixCol=m2)
+
 rm(list=c("m1","m2","n"))
